@@ -1,0 +1,28 @@
+# Regression tests for https://github.com/harfbuzz/harfbuzz/issues/4503
+#
+# When shaping Mongolian script with a font that lacks NARROW NO-BREAK
+# SPACE (U+202F) or MONGOLIAN VOWEL SEPARATOR (U+180E), HarfBuzz must
+# report .notdef rather than masking the missing glyph with the U+0020
+# space glyph: the latter short-circuits the caller's font cascade and
+# breaks Mongolian shaping downstream.
+#
+# These format characters are required by Mongolian shaping (MVS as a
+# vowel-separator, NNBSP as a suffix joiner), so when the active font
+# does not provide them, the caller must be allowed to fall back.
+#
+# The test font has U+0020 (used by the legacy fallback path) but lacks
+# U+202F, U+180E and any Mongolian letters.
+
+# Mongolian script, NNBSP missing -> .notdef (not space).
+../fonts/3105b51976b879032c66aa93a634b3b3672cd344.ttf;--script=Mong;U+1820,U+202F,U+1822;[.notdef=0+364|.notdef=1+364|.notdef=2+364]
+../fonts/3105b51976b879032c66aa93a634b3b3672cd344.ttf;--script=Mong;U+202F;[.notdef=0+364]
+
+# Mongolian script, MVS missing -> .notdef (not space).
+../fonts/3105b51976b879032c66aa93a634b3b3672cd344.ttf;--script=Mong;U+1820,U+180E,U+1822;[.notdef=0+364|.notdef=1+0|.notdef=2+364]
+../fonts/3105b51976b879032c66aa93a634b3b3672cd344.ttf;--script=Mong;U+180E;[.notdef=0+0]
+
+# Non-Mongolian scripts: existing fallback behavior is preserved.
+# NNBSP keeps falling back to U+0020 with half-advance (SPACE_NARROW).
+../fonts/3105b51976b879032c66aa93a634b3b3672cd344.ttf;--script=Latn;U+202F;[space=0+146]
+# MVS keeps being hidden by the U+0020 invisible glyph with zero advance.
+../fonts/3105b51976b879032c66aa93a634b3b3672cd344.ttf;--script=Latn;U+180E;[space=0+0]

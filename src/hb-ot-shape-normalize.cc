@@ -175,7 +175,20 @@ decompose_current_character (const hb_ot_shape_normalize_context_t *c, bool shor
   {
     hb_codepoint_t space_glyph;
     hb_unicode_funcs_t::space_t space_type = buffer->unicode->space_fallback_type (u);
-    if (space_type != hb_unicode_funcs_t::NOT_SPACE &&
+
+    /* In Mongolian, NARROW NO-BREAK SPACE (U+202F) is a script-meaningful
+     * suffix joiner that participates in GSUB. Don't synthesize it from
+     * the U+0020 glyph: that glyph likely belongs to a font that does not
+     * cover Mongolian (e.g. a subsetted unicode-range Latin slice), and
+     * substituting it masks a missing glyph from the caller, short-
+     * circuiting font cascade and breaking shaping downstream.
+     * https://github.com/harfbuzz/harfbuzz/issues/4503 */
+    bool suppress_narrow_fallback =
+	space_type == hb_unicode_funcs_t::SPACE_NARROW &&
+	buffer->props.script == HB_SCRIPT_MONGOLIAN;
+
+    if (!suppress_narrow_fallback &&
+	space_type != hb_unicode_funcs_t::NOT_SPACE &&
 	(c->font->get_nominal_glyph (0x0020, &space_glyph) || (space_glyph = buffer->invisible)))
     {
       _hb_glyph_info_set_unicode_space_fallback_type (&buffer->cur(), space_type);
